@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Network Status</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0b0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Network Status">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icono.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icono-180.png">
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--ink:#0b0f14;--mute:#6b7280;--line:#e5e7eb;--acc:#0b0f14;--accInk:#fff;--bad:#b42318}
+@media (prefers-color-scheme:dark){:root{--bg:#0b0f14;--card:#141a22;--ink:#eef1f5;--mute:#8b95a3;--line:#252d38;--acc:#eef1f5;--accInk:#0b0f14;--bad:#ff8a80}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+#gate{min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px 16px calc(24px + env(safe-area-inset-bottom))}
+.card{width:100%;max-width:360px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px 24px}
+.eb{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0 0 6px}
+h1{font-size:24px;margin:0 0 20px;letter-spacing:-.01em}
+label{display:block;font-size:13px;color:var(--mute);margin:0 0 6px}
+input[type=password]{width:100%;font-size:16px;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);outline:none}
+input[type=password]:focus{border-color:var(--ink)}
+.rem{display:flex;gap:8px;align-items:center;margin:14px 0 18px;font-size:13px;color:var(--mute)}
+button{width:100%;font:600 15px inherit;font-family:inherit;padding:12px;border:0;border-radius:10px;background:var(--acc);color:var(--accInk);cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+.msg{min-height:20px;margin:12px 0 0;font-size:13px;color:var(--mute)}
+.msg.bad{color:var(--bad)}
+#app{position:fixed;inset:0;width:100%;height:100%;border:0;display:none;background:var(--bg)}
+</style>
+</head>
+<body>
+<div id="gate">
+  <form class="card" id="f" autocomplete="on">
+    <p class="eb">OMODA &amp; JAECOO</p>
+    <h1>Network Status</h1>
+    <input type="text" name="username" value="network-status" autocomplete="username" hidden>
+    <label for="pw">Contraseña</label>
+    <input id="pw" type="password" autocomplete="current-password" required autofocus>
+    <div class="rem"><input id="rem" type="checkbox" checked><label for="rem" style="margin:0">Recordar en este dispositivo</label></div>
+    <button id="go" type="submit">Entrar</button>
+    <p class="msg" id="msg">Descargando datos…</p>
+  </form>
+</div>
+<iframe id="app" title="Network Status" allow="clipboard-write; fullscreen"></iframe>
+<script>
+(() => {
+  const ITER = 600000, LS = "ojns-pw";
+  const $ = id => document.getElementById(id), msg = (t, bad) => { $("msg").textContent = t; $("msg").className = "msg" + (bad ? " bad" : ""); };
+  const store = { get() { try { return localStorage.getItem(LS); } catch (e) { return null; } },
+                  set(v) { try { v ? localStorage.setItem(LS, v) : localStorage.removeItem(LS); } catch (e) {} } };
+  const bin = fetch("datos.bin", { cache: "no-cache" }).then(r => { if (!r.ok) throw new Error("http " + r.status); return r.arrayBuffer(); });
+  bin.then(() => { if (!busy) msg(""); }, () => msg("No se pudieron descargar los datos. Revisa la conexión y recarga.", true));
+  let busy = false;
+  async function open(pw, remember) {
+    busy = true; $("go").disabled = true; msg("Abriendo…");
+    try {
+      const b = new Uint8Array(await bin);
+      const salt = b.slice(3, 19), iv = b.slice(19, 31), ct = b.slice(31);
+      const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+      const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: ITER, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+      let raw;
+      try { raw = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct); }
+      catch (e) { store.set(null); msg("Contraseña incorrecta.", true); return; }
+      const txt = await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+      const F = JSON.parse(txt);
+      const url = (s, t) => URL.createObjectURL(new Blob([s], { type: t }));
+      const u = { "calidad.html": url(F["calidad.html"], "text/html"), "mapa-cp-data.js": url(F["mapa-cp-data.js"], "text/javascript"), "mapa-cp-engine.js": url(F["mapa-cp-engine.js"], "text/javascript") };
+      let p = F.panel;
+      for (const k in u) p = p.split("`" + k + "`").join("`" + u[k] + "`").split('"' + k + '"').join('"' + u[k] + '"');
+      store.set(remember ? pw : null);
+      const app = $("app");
+      app.src = url(p, "text/html") + location.hash;
+      app.onload = () => { $("gate").style.display = "none"; app.style.display = "block"; try { document.title = app.contentDocument.title || document.title; } catch (e) {} };
+    } catch (e) { msg("No se pudo abrir el panel: " + e.message, true); }
+    finally { busy = false; $("go").disabled = false; }
+  }
+  $("f").addEventListener("submit", e => { e.preventDefault(); open($("pw").value, $("rem").checked); });
+  const saved = store.get(); if (saved) { $("pw").value = saved; open(saved, true); }
+})();
+</script>
+</body>
+</html>
