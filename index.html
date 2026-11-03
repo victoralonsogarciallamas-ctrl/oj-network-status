@@ -69,7 +69,7 @@ button:disabled{opacity:.5;cursor:default}
       const txt = await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
       const F = JSON.parse(txt);
       const url = (s, t) => URL.createObjectURL(new Blob([s], { type: t }));
-      const u = { "calidad.html": url(F["calidad.html"], "text/html"), "mapa-cp-data.js": url(F["mapa-cp-data.js"], "text/javascript"), "mapa-cp-engine.js": url(F["mapa-cp-engine.js"], "text/javascript") };
+      const u = { "calidad.html": url(F["calidad.html"], "text/html"), "mapa-cp-data.js": url(F["mapa-cp-data.js"], "text/javascript"), "mapa-cp-engine.js": url(F["mapa-cp-engine.js"], "text/javascript"), "mapa-cp.css": url(F["mapa-cp.css"], "text/css") };
       let p = F.panel;
       for (const k in u) p = p.split("`" + k + "`").join("`" + u[k] + "`").split('"' + k + '"').join('"' + u[k] + '"');
       store.set(remember ? pw : null);
