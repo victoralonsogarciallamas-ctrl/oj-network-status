@@ -33,7 +33,7 @@ button{width:100%;font:600 15px inherit;font-family:inherit;padding:12px;border:
 button:disabled{opacity:.5;cursor:default}
 .msg{min-height:20px;margin:12px 0 0;font-size:13px;color:var(--mute)}
 .msg.bad{color:var(--bad)}
-#app{position:fixed;top:0;left:0;width:100%;height:100vh;height:100lvh;border:0;display:none;background:var(--bg)}
+#app{position:fixed;top:0;left:0;width:100%;height:100%;border:0;display:none;background:var(--bg)}
 </style>
 </head>
 <body>
@@ -78,7 +78,10 @@ button:disabled{opacity:.5;cursor:default}
       store.set(remember ? pw : null);
       const app = $("app");
       app.src = url(p, "text/html") + location.hash;
-      app.onload = () => { $("gate").style.display = "none"; app.style.display = "block"; try { document.title = app.contentDocument.title || document.title; } catch (e) {} };
+      app.onload = () => { $("gate").style.display = "none"; app.style.display = "block";
+        // iPhone en modo app (añadido a inicio): el 100 % se queda corto por la barra de estado; se usa la pantalla entera
+        const fit = () => { if (!navigator.standalone) return; const L = Math.max(screen.width, screen.height), S = Math.min(screen.width, screen.height); app.style.height = (innerWidth > innerHeight ? S : L) + "px"; };
+        fit(); addEventListener("resize", fit); addEventListener("orientationchange", () => setTimeout(fit, 300)); try { document.title = app.contentDocument.title || document.title; } catch (e) {} };
     } catch (e) { msg("No se pudo abrir el panel: " + e.message, true); }
     finally { busy = false; $("go").disabled = false; }
   }
