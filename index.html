@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <title>Network Status</title>
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#1D5A6B">
@@ -81,7 +81,8 @@ button:disabled{opacity:.5;cursor:default}
       app.onload = () => { $("gate").style.display = "none"; app.style.display = "block";
         // iPhone en modo app (añadido a inicio): el 100 % se queda corto por la barra de estado; se usa la pantalla entera
         const fit = () => { if (!navigator.standalone) return; const L = Math.max(screen.width, screen.height), S = Math.min(screen.width, screen.height); app.style.height = (innerWidth > innerHeight ? S : L) + "px"; };
-        fit(); addEventListener("resize", fit); addEventListener("orientationchange", () => setTimeout(fit, 300)); try { document.title = app.contentDocument.title || document.title; } catch (e) {} };
+        fit(); addEventListener("resize", fit); addEventListener("orientationchange", () => setTimeout(fit, 300));
+  addEventListener("message", (e) => { const d = e.data; if (e.source === app.contentWindow && d && d.oj === "theme-color" && /^rgba?\(/.test(d.c || "")) document.querySelector('meta[name="theme-color"]').setAttribute("content", d.c); }); try { document.title = app.contentDocument.title || document.title; } catch (e) {} };
     } catch (e) { msg("No se pudo abrir el panel: " + e.message, true); }
     finally { busy = false; $("go").disabled = false; }
   }
