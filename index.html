@@ -77,21 +77,11 @@ button:disabled{opacity:.5;cursor:default}
       let p = F.panel;
       for (const k in u) p = p.split("`" + k + "`").join("`" + u[k] + "`").split('"' + k + '"').join('"' + u[k] + '"');
       store.set(remember ? pw : null);
-      const app = $("app");
-      app.src = url(p, "text/html") + location.hash;
-      app.onload = () => { $("gate").style.display = "none"; app.style.display = "block";
-        // iPhone en modo app (añadido a inicio): el 100 % se queda corto por la barra de estado; se usa la pantalla entera
-        const app_ = () => navigator.standalone || matchMedia("(display-mode: standalone), (display-mode: fullscreen)").matches;
-        const fit = () => { const L = Math.max(screen.width, screen.height), S = Math.min(screen.width, screen.height), full = innerWidth > innerHeight ? S : L;
-          // En modo app se usa la pantalla entera; en el navegador, el alto visible real (nunca menos que la ventana)
-          const h = app_() ? Math.max(full, innerHeight) : Math.max(innerHeight, document.documentElement.clientHeight);
-          app.style.height = h + "px";
-          if (location.hash === "#diag") { let d = document.getElementById("diag"); if (!d) { d = document.createElement("div"); d.id = "diag"; d.style.cssText = "position:fixed;z-index:99;left:8px;top:60px;background:#000;color:#fff;font:12px monospace;padding:6px;border-radius:6px;pointer-events:none"; document.body.appendChild(d); }
-            d.textContent = `app=${app_()} st=${navigator.standalone} scr=${screen.width}x${screen.height} inner=${innerWidth}x${innerHeight} cli=${document.documentElement.clientHeight} h=${h}`; } };
-        fit(); addEventListener("resize", fit); addEventListener("orientationchange", () => setTimeout(fit, 300)); setTimeout(fit, 500); visualViewport && visualViewport.addEventListener("resize", fit);
-  addEventListener("message", (e) => { const d = e.data; if (e.source === app.contentWindow && d && d.oj === "theme-color" && /^rgba?\(/.test(d.c || "")) document.querySelector('meta[name="theme-color"]').setAttribute("content", d.c); }); try { document.title = app.contentDocument.title || document.title; } catch (e) {} };
+      // El panel sustituye a esta página (sin marco intermedio): en el iPhone, un marco desplazaba los toques y cortaba la barra de abajo
+      document.open(); document.write(p); document.close();
+      return;
     } catch (e) { msg("No se pudo abrir el panel: " + e.message, true); }
-    finally { busy = false; $("go").disabled = false; }
+    finally { busy = false; const g = $("go"); if (g) g.disabled = false; }
   }
   $("f").addEventListener("submit", e => { e.preventDefault(); open($("pw").value, $("rem").checked); });
   const saved = store.get(); if (saved) { $("pw").value = saved; open(saved, true); }
